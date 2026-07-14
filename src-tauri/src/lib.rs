@@ -226,3 +226,44 @@ pub fn run() {
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_crc16_xmodem() {
+        assert_eq!(crc16_xmodem(&[]), 0);
+        let data = [0x30, 0x01, 0x02, 0x03];
+        let crc = crc16_xmodem(&data);
+        assert!(crc > 0);
+    }
+
+    #[test]
+    fn test_encode_stellar_public_key() {
+        let dummy_pubkey = [0u8; 32];
+        let address = encode_stellar_public_key(&dummy_pubkey);
+        assert!(address.starts_with('G'));
+        assert_eq!(address.len(), 56);
+    }
+
+    #[test]
+    fn test_derive_stellar_key() {
+        let phrase = generate_seed().unwrap();
+        let mnemonic = Mnemonic::parse(&phrase).unwrap();
+        let seed = mnemonic.to_seed("");
+        
+        let signing_key = derive_stellar_key(&seed, 0);
+        let public_key = signing_key.verifying_key();
+        let address = encode_stellar_public_key(&public_key.to_bytes());
+        
+        assert!(address.starts_with('G'));
+        assert_eq!(address.len(), 56);
+        
+        let signing_key_1 = derive_stellar_key(&seed, 1);
+        let public_key_1 = signing_key_1.verifying_key();
+        let address_1 = encode_stellar_public_key(&public_key_1.to_bytes());
+        
+        assert_ne!(address, address_1);
+    }
+}
